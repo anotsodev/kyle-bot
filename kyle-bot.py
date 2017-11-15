@@ -1,5 +1,10 @@
 #!encoding: utf-8
 '''
+	Requirements
+		- Tokens must be added on user env
+		- pip install slackclient
+		- pip install twitter
+		
 	Slack Bot
 	PH WOEID = 23424934
 '''
@@ -49,7 +54,7 @@ def command_handler(command, channel):
 			if len(second_arg) > 0:
 				if not second_arg.isalpha():
 					fetch_twitter(channel,second_arg)
-					response = "Done fetching latest Trends on Twitter"
+					response = "Done fetching trends"
 				else:
 					response = "@kyle-bot start n (where 'n' is the number of update interval)"
 			else:
@@ -75,26 +80,36 @@ def parse_output(rtm_output, at_bot, bot_id):
 	return None, None
 
 def fetch_twitter(channel, second_arg):
+	FETCH_TIME = 600 # every 10 minutes
+	# print_text = ""
+	
 	n = int(second_arg)
-	response = "Fetching latest Trends on Philippines on Twitter..."
-	slack_client.api_call("chat.postMessage", channel=channel, text=response, as_user=True)
 	while (n > 0):
-		# slack_client.api_call("chat.postMessage", channel=channel, text=response, as_user=True)
+		rank = 1
+		# response = "Fetching Tweets... Intervals left: "+str(n)
+		response = "Fetching Trends... Intervals left: "+str(n)
+		slack_client.api_call("chat.postMessage", channel=channel, text=response, as_user=True)
 		results = twitter.trends.place(_id = 23424934)
 		for location in results:
 			for trend in location["trends"]:
-				out = [{"color": "#36a64f","title": trend["name"],"title_link": trend["url"],"footer": str(trend["tweet_volume"])+" Tweets"}]
-				
+
+		# statuses = twitter.statuses.home_timeline(count = 15)
+		# for status in statuses:
+				out = [{"color": "#36a64f","title": trend["name"],"title_link": trend["url"],"footer": str(trend["tweet_volume"])+" Tweets - Rank "+str(rank)}]
+			# out = [{"color": "#36a64f","title": status["user"]["screen_name"],"title_link": status["user"]["profile_image_url"],"text": status["text"],"footer": status["created_at"]}]	
 				slack_client.api_call("chat.postMessage", parse="full", as_user=True, channel=channel, attachments=json.dumps(out))
+				rank += 1
 		n -= 1
-		time.sleep(600)
+		if n == 0:
+			break
+		time.sleep(FETCH_TIME)
 		
 
 
 if __name__ == "__main__":
 	bot_id = get_bot_id()
 	at_bot = "<@" + bot_id + ">"
-	DELAY = 1 #10 minutes
+	DELAY = 1
 	if slack_client.rtm_connect():
 		print "Bot connected and running!"
 		while True:
@@ -102,7 +117,6 @@ if __name__ == "__main__":
 			if command and channel:
 				command_handler(command, channel)
 			time.sleep(DELAY)
-			# slack_client.api_call("chat.postMessage", channel=channel, text=response, as_user=True)
 	else:
 		print "Connection failed."
 
